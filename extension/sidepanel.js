@@ -1,5 +1,4 @@
 console.log("Side panel loaded!");
-const API_BASE = "http://localhost:8080/api";
 
 // Load saved links on startup
 loadSavedLinks();
@@ -29,59 +28,34 @@ async function handleChoice(type) {
   
   // Execute script to get share link
   chrome.scripting.executeScript({
-  target: { tabId: tab.id },
-  func: getShareLink
-}, async (results) => {
-  if (results && results[0] && results[0].result) {
-    const shareLink = results[0].result;
-
-    // Copy + save
-    navigator.clipboard.writeText(shareLink);
-    saveLink(shareLink, type);
-
-    // Call your backend to get the JSON summary
-    try {
-      status.className = '';
-      status.innerHTML = '<div class="loader"></div>Summarizing via backend…';
-
-      const resp = await fetch(`${API_BASE}/share-solution`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: shareLink })
-      });
-
-      const data = await resp.json();
-      if (!data.ok) throw new Error(data.error || "Summarization failed");
-
-      const s = data.summary; // <-- this already matches your desired JSON schema
+    target: { tabId: tab.id },
+    func: getShareLink
+  }, (results) => {
+    if (results && results[0] && results[0].result) {
+      const shareLink = results[0].result;
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(shareLink);
+      
+      // Save to storage
+      saveLink(shareLink, type);
+      
       status.className = 'success';
-      status.innerHTML =
-        `Link copied & saved.<br><br>` +
-        `<pre style="white-space: pre-wrap; font-size:12px; background:#f7f7f7; padding:8px; border-radius:6px; max-height: 40vh; overflow:auto;">` +
-        `${JSON.stringify(s, null, 2)}` +
-        `</pre>` +
-        `<button id="copyJsonBtn" class="download-btn" style="margin-top:8px;">Copy JSON</button>`;
-
-      // Optional: Copy JSON button
-      document.getElementById('copyJsonBtn')?.addEventListener('click', () => {
-        navigator.clipboard.writeText(JSON.stringify(s, null, 2));
-      });
-
-      // Refresh saved links UI
+      status.innerHTML = `
+        Link copied to clipboard!<br>
+        <small style="margin-top: 8px; display: block; opacity: 0.8;">${shareLink}</small>
+      `;
+      
+      console.log("Link copied:", shareLink);
+      
+      // Reload the saved links list
       loadSavedLinks();
-
-    } catch (e) {
-      console.error(e);
+      
+    } else {
       status.className = 'error';
-      status.innerHTML = 'Backend error: ' + e.message;
+      status.innerHTML = 'Could not find share link.<br>Make sure the Claude share dialog is open!';
     }
-
-  } else {
-    status.className = 'error';
-    status.innerHTML = 'Could not find share link.<br>Make sure the Claude share dialog is open!';
-  }
-});
-
+  });
 }
 
 // This function runs in the page context
