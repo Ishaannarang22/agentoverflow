@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import LRU from "lru-cache";
+import { LRUCache } from "lru-cache";
 import { chromium } from "playwright";
 import * as cheerio from "cheerio";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -40,7 +40,7 @@ app.use((req, _res, next) => {
 });
 
 // Cache by share link for 15 min
-const cache = new LRU({ max: 200, ttl: 15 * 60 * 1000 });
+const cache = new LRUCache({ max: 200, ttl: 15 * 60 * 1000 });
 
 // Gemini setup (AI Studio key; free tier)
 const genai = new GoogleGenerativeAI(GOOGLE_API_KEY);
@@ -104,31 +104,70 @@ async function fetchClaudeShareHTML(url) {
 const responseSchema = {
   type: "object",
   properties: {
-    problem_title: { type: "string" },
+    problem: { type: "string" },
     context: { type: "string" },
-    description: { type: "string" },
-    solution: { type: "string" }
+    error_messages: {
+      type: "array",
+      items: { type: "string" }
+    },
+    attempted_solutions: {
+      type: "array",
+      items: { type: "string" }
+    },
+    code_snippets: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          description: { type: "string" },
+          code: { type: "string" }
+        },
+        required: ["description", "code"]
+      }
+    },
+    tags: {
+      type: "array",
+      items: { type: "string" }
+    }
   },
-  required: ["problem_title", "context", "description", "solution"]
+  required: [
+    "problem",
+    "context",
+    "error_messages",
+    "attempted_solutions",
+    "code_snippets",
+    "tags"
+  ]
 };
 
 async function summarizeWithGemini(messages, maxTurns) {
   const trimmed = messages.slice(-Math.max(1, maxTurns));
   const compact = trimmed.map(m => {
     let c = m.content;
-    if (c.length > 4000) c = c.slice(0, 3800) + " …snip…";
+    // NOTE: keep code blocks; they’re needed for code_snippets extraction.
+    if (c.length > 12000) c = c.slice(0, 11800) + " …snip…";
     return { role: m.role, content: c };
   });
 
   const system = `
-You are Agent Overflow’s summarizer.
-Return only JSON with keys: problem_title, context, description, solution.
-Hard limits:
-- problem_title ≤ 10 words
-- context ≤ 100 words
-- description ≤ 100 words
-- solution: concise imperative steps (1–3 lines).
-If uncertain, be conservative and short.
+You are Agent Overflow’s extractor. Return ONLY valid JSON following this schema:
+{
+  "problem": string,                      // 1–2 sentences describing the core issue
+  "context": string,                      // concise background (stack, versions, what they are trying)
+  "error_messages": string[],             // up to 5 distinct messages/symptoms (verbatim if possible)
+  "attempted_solutions": string[],        // up to 5 actions already tried (short phrases)
+  "code_snippets": [                      // up to 2 critical snippets
+    { "description": string, "code": string }
+  ],
+  "tags": string[]                        // 4–10 concise tags (kebab or snake case)
+}
+
+Guidelines:
+- Prefer concrete, verifiable details lifted from the transcript.
+- Keep "problem" to 1–2 sentences; "context" <= ~80 words.
+- Collapse duplicates; preserve exact error text when available.
+- Include at least 1 code_snippet if any code appears in the transcript.
+- If something is unknown, use an empty array [] or empty string "" accordingly.
 `.trim();
 
   const resp = await model.generateContent({
@@ -138,23 +177,39 @@ If uncertain, be conservative and short.
     ],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 400,
+      maxOutputTokens: 600,
       responseMimeType: "application/json",
       responseSchema
     }
   });
 
-  let out = {};
+  // With responseSchema, this should be valid JSON:
+  let out;
   try {
     out = JSON.parse(resp.response.text());
   } catch {
-    out = { problem_title: "", context: "", description: "", solution: resp.response.text() };
+    // Fallback to a minimal empty object with required keys
+    out = {
+      problem: "",
+      context: "",
+      error_messages: [],
+      attempted_solutions: [],
+      code_snippets: [],
+      tags: []
+    };
   }
 
-  // Server caps
-  out.problem_title = hardCapWords(out.problem_title, 10);
-  out.context       = hardCapWords(out.context, 100);
-  out.description   = hardCapWords(out.description, 100);
+  // Optional tightening/caps (light-touch)
+  const limitWords = (s, n) => {
+    const w = s.match(/\w+(?:'\w+)?/g) || [];
+    return w.length <= n ? w.join(" ") : w.slice(0, n).join(" ");
+  };
+  out.problem = limitWords(out.problem || "", 40);     // ~1–2 sentences
+  out.context = limitWords(out.context || "", 100);    // compact
+  out.error_messages = Array.isArray(out.error_messages) ? out.error_messages.slice(0, 5) : [];
+  out.attempted_solutions = Array.isArray(out.attempted_solutions) ? out.attempted_solutions.slice(0, 5) : [];
+  out.code_snippets = Array.isArray(out.code_snippets) ? out.code_snippets.slice(0, 2) : [];
+  out.tags = Array.isArray(out.tags) ? out.tags.slice(0, 10) : [];
 
   return out;
 }
