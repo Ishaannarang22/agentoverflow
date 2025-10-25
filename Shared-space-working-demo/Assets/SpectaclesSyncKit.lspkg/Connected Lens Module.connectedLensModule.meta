@@ -1,0 +1,16 @@
+- !<AssetImportMetadata/9c202ba7-2596-e6a3-9e99-8c7d892fb292>
+  ImportedAssetIds:
+    ConnectedLensModule: !<reference> 2df474c2-c430-42dd-983d-2593b3648b93
+  ImporterName: ConnectedLensModuleImporter
+  PrimaryAsset: !<reference> 2df474c2-c430-42dd-983d-2593b3648b93
+  PackageType: NotAPackage
+  PackagePolicy: CannotBeUnpacked
+  ExtraData:
+    {}
+  AssetDataMap:
+    ConnectedLensModule: !<own> 00000000-0000-0000-0000-000000000000
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000

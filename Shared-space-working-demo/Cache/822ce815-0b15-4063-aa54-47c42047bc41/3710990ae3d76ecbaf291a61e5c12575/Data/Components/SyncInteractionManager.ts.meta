@@ -1,0 +1,43 @@
+- !<AssetImportMetadata/b7a35011-571b-4f25-b38f-3d8fd397801f>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 62fcf6a1-ba97-4c46-889d-c6e06cb7dc52
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 62fcf6a1-ba97-4c46-889d-c6e06cb7dc52
+  PackageType: NotAPackage
+  PackagePolicy: CannotBeUnpacked
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 265364aa-5166-4609-a875-855de46b479d
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/265364aa-5166-4609-a875-855de46b479d>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  InternalVersion: 0
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  ComponentUid: d5977bb0-0b4b-448d-86c8-6960dcf90a66
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  CurrentVisibility: Editable
+  MaxVisibility: Editable
+  ScriptInputsHidden:
+    {}
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  DefaultScriptInputs:
+    -
+      {}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"separator"}'

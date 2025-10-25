@@ -1,0 +1,13 @@
+- !<AssetCache>
+  AssetFiles:
+    c3190a49-cc7a-40ff-b039-8bb6fd9a3947: 94bbbe1b-0afd-6318-63a1-5d7b088c5113/c2db1aa188f1ec098db371d7b6584ca2/Data/MappingHintBg.png
+  Assets:
+    - !<FileTexture/c3190a49-cc7a-40ff-b039-8bb6fd9a3947>
+      PackagePath: ""
+      FileInfo: !<FileTextureInfo>
+        Width: 690
+        Height: 470
+  SourceHash: c2db1aa188f1ec098db371d7b6584ca2
+  FileHash: beeb786c8f258e4b3dcbd6d92b60e652
+  NativePackageItems:
+    []
