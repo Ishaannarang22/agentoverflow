@@ -1,0 +1,13 @@
+{
+  "name": "claude-chat-scraper",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Simple scraper for Claude.ai share links",
+  "main": "scraper.js",
+  "scripts": {
+    "scrape": "node scraper.js"
+  },
+  "dependencies": {
+    "playwright": "^1.48.2"
+  }
+}
