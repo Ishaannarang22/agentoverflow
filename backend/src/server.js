@@ -19,7 +19,7 @@ import { testConnection } from './config/elastic.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.API_PORT || 3002;
 
 // Security middleware
 app.use(helmet());

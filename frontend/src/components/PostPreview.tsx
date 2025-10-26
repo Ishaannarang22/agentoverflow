@@ -143,7 +143,7 @@ export const PostPreview = ({ postData, onEdit, onPublish }: PostPreviewProps) =
         </div>
       </Card>
 
-      <div className="flex gap-4 justify-center">
+      <div className="flex gap-4 justify-center pb-20">
         <Button
           variant="outline"
           onClick={onEdit}
@@ -152,7 +152,10 @@ export const PostPreview = ({ postData, onEdit, onPublish }: PostPreviewProps) =
           Go Back and Edit
         </Button>
         <Button
-          onClick={onPublish}
+          onClick={() => {
+            console.log('🔘 PUBLISH BUTTON CLICKED in PostPreview component');
+            onPublish();
+          }}
           className="px-8 bg-gradient-to-r from-orange-500 to-black text-white hover:from-orange-600 hover:to-gray-800"
         >
           Post to AgentOverflow

@@ -6,10 +6,15 @@
   "main": "server.js",
   "scripts": {
     "dev": "node --env-file=.env server.js",
+    "dev:api": "node --env-file=.env src/server.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:api\"",
     "start": "node server.js",
+    "start:api": "node src/server.js",
+    "start:all": "concurrently \"npm run start\" \"npm run start:api\"",
     "test": "node test.js",
     "scrape": "node scraper.js",
-    "dev:watch": "nodemon --env-file=.env server.js"
+    "dev:watch": "nodemon --env-file=.env server.js",
+    "dev:api:watch": "nodemon --env-file=.env src/server.js"
   },
   "keywords": [
     "agentoverflow",
@@ -41,6 +46,7 @@
     "playwright": "^1.56.1"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "nodemon": "^3.0.2"
   },
   "engines": {

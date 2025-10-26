@@ -1,5 +1,5 @@
 // API service for communicating with the Express.js backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
 
 interface ApiResponse<T = any> {
   success: boolean;

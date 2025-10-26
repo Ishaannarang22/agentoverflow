@@ -2,11 +2,16 @@
   "manifest_version": 3,
   "name": "Claude Solution Finder",
   "version": "1.0",
-  "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
+  "permissions": ["sidePanel", "activeTab", "scripting", "storage", "tabs"],
   "content_scripts": [
     {
       "matches": ["https://claude.ai/*"],
       "js": ["content.js"]
+    },
+    {
+      "matches": ["http://localhost:8081/submit"],
+      "js": ["content_script.js"],
+      "run_at": "document_idle"
     }
   ],
   "background": {
@@ -17,6 +22,7 @@
   },
   "host_permissions": [
     "https://claude.ai/*",
-    "http://localhost:3001/*"
+    "http://localhost:3001/*",
+    "http://localhost:8081/*"
   ]
 }

@@ -9,22 +9,54 @@ router.post('/', async (req, res) => {
     const postData = req.body;
     const { author_id, title, content, category, tags = [], type = 'question' } = postData;
 
-    // Validate required fields
-    if (!author_id || !title || !content || !category) {
+    // Validate required fields for claude_solutions
+    if (!author_id || !title) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: author_id, title, content, category'
+        error: 'Missing required fields: author_id, title'
       });
     }
 
-    // Create post in posts_ai index
+    // Ensure user exists in users index
+    await ensureUserExists(author_id);
+
+    // Map the data to claude_solutions schema - populate ALL fields
+    const claudeSolutionData = {
+      // Core fields
+      title: postData.title || '',
+      problem: postData.problem || postData.context || '',
+      context: postData.content || postData.context || '',
+      solution: postData.solution || '',
+      summary: postData.summary || postData.solution || '',
+      
+      // Technical fields
+      technical_description: postData.technical_description || postData.architecture || '',
+      technical_deep_context: postData.technical_deep_context || postData.architecture || '',
+      
+      // Problem-solving fields
+      attempted_solutions: postData.attempted_solutions || postData.context || '',
+      error_messages: postData.error_messages || '',
+      
+      // Code snippets (ensure it's an array)
+      code_snippets: Array.isArray(postData.code_snippets) ? postData.code_snippets : [],
+      
+      // Metadata fields
+      tags: Array.isArray(postData.tags) ? postData.tags : [],
+      type: postData.type || 'solution',
+      share_link: postData.share_link || '',
+      solution_id: postData.solution_id || `sol_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      
+      // System fields
+      author_id: postData.author_id,
+      created_at: new Date().toISOString()
+    };
+
+    console.log('📝 Creating claude solution with data:', claudeSolutionData);
+
+    // Create post in claude_solutions index
     const postResponse = await elasticClient.index({
-      index: INDICES.POSTS_AI,
-      body: {
-        ...postData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
+      index: INDICES.CLAUDE_SOLUTIONS,
+      body: claudeSolutionData
     });
 
     const postId = postResponse._id;
@@ -58,6 +90,9 @@ router.post('/', async (req, res) => {
       }
     });
 
+    // Update user stats (increment post count)
+    await updateUserStats(author_id, 'posts', 1);
+
     res.status(201).json({
       success: true,
       data: {
@@ -75,6 +110,77 @@ router.post('/', async (req, res) => {
     });
   }
 });
+
+// Helper function to ensure user exists
+async function ensureUserExists(userId) {
+  try {
+    // Check if user exists
+    const userExists = await elasticClient.exists({
+      index: INDICES.USERS,
+      id: userId
+    });
+
+    if (!userExists) {
+      console.log(`👤 Creating user ${userId} in users index`);
+      
+      // Create anonymous user
+      const userDoc = {
+        username: userId === 'anonymous' ? 'Anonymous User' : userId,
+        email: userId === 'anonymous' ? 'anonymous@agentoverflow.com' : `${userId}@agentoverflow.com`,
+        display_name: userId === 'anonymous' ? 'Anonymous User' : userId,
+        bio: '',
+        avatar_url: '',
+        stats: {
+          posts_count: 0,
+          comments_count: 0,
+          likes_received: 0,
+          reputation: 0
+        },
+        preferences: {
+          theme: 'light',
+          notifications: true
+        },
+        created_at: new Date().toISOString(),
+        last_login: new Date().toISOString()
+      };
+
+      await elasticClient.index({
+        index: INDICES.USERS,
+        id: userId,
+        body: userDoc
+      });
+
+      console.log(`✅ User ${userId} created successfully`);
+    }
+  } catch (error) {
+    console.error(`Error ensuring user ${userId} exists:`, error);
+    // Don't throw error - continue with post creation
+  }
+}
+
+// Helper function to update user stats
+async function updateUserStats(userId, statType, increment = 1) {
+  try {
+    const updateBody = {};
+    updateBody[`stats.${statType}_count`] = { increment };
+
+    await elasticClient.update({
+      index: INDICES.USERS,
+      id: userId,
+      body: {
+        script: {
+          source: `ctx._source.stats.${statType}_count += params.increment`,
+          params: { increment }
+        }
+      }
+    });
+
+    console.log(`📊 Updated user ${userId} ${statType} count by ${increment}`);
+  } catch (error) {
+    console.error(`Error updating user ${userId} stats:`, error);
+    // Don't throw error - continue with post creation
+  }
+}
 
 // Update a post
 router.put('/:id', async (req, res) => {

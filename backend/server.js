@@ -11,6 +11,8 @@ const {
   PORT = 3001,
   CORS_ORIGIN = "*",
   RATE_LIMIT_PER_MIN = "10",
+  ELASTICSEARCH_ENDPOINT,
+  ELASTICSEARCH_API_KEY,
 } = process.env;
 
 if (!LAVA_FORWARD_TOKEN) {
@@ -124,23 +126,35 @@ async function callLavaAPI(conversationText, actionType, shareUrl) {
   const urlMatch = shareUrl.match(/\/share\/([a-f0-9-]+)/);
   const solutionId = urlMatch ? urlMatch[1] : "";
 
-  const response = await fetch(
-    `${LAVA_BASE_URL}/forward?u=https://api.anthropic.com/v1/messages`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${LAVA_FORWARD_TOKEN}`,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 4000,
-        temperature: 0.1,
-        messages: [
-          {
-            role: "user",
-            content: `${systemContext}
+  // Truncate conversation if too long (keep first 200k chars to avoid timeout)
+  const maxLength = 200000;
+  const truncatedText = conversationText.length > maxLength 
+    ? conversationText.substring(0, maxLength) + "\n\n[TRUNCATED - Full conversation was longer]"
+    : conversationText;
+
+  console.log(`📊 Input size: ${conversationText.length} chars (${truncatedText.length} after truncation)`);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
+
+  try {
+    const response = await fetch(
+      `${LAVA_BASE_URL}/forward?u=https://api.anthropic.com/v1/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${LAVA_FORWARD_TOKEN}`,
+          "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 4000,
+          temperature: 0.1,
+          messages: [
+            {
+              role: "user",
+              content: `${systemContext}
 
 ${instructions}
 
@@ -150,42 +164,171 @@ REQUIRED FIELDS (must include exactly as specified):
 - type: "${actionType}"
 
 Claude Conversation to analyze:
-${conversationText}
+${truncatedText}
 
 Extract the information following the EXACT schema above. Return ONLY valid JSON with no markdown formatting.`
-          }
-        ]
-      })
+            }
+          ]
+        }),
+        signal: controller.signal
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Lava API error: ${response.status} - ${errorText}`);
     }
-  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Lava API error: ${response.status} - ${errorText}`);
-  }
+    const data = await response.json();
+    
+    // Track usage
+    if (data.usage) {
+      usage.totalTokens += (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
+    }
 
-  const data = await response.json();
-  
-  // Track usage
-  if (data.usage) {
-    usage.totalTokens += (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
-  }
+    // Parse Claude's response
+    const textContent = data.content[0].text;
+    
+    // Extract JSON from response (Claude might wrap it in markdown)
+    let jsonText = textContent;
+    const jsonMatch = textContent.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[1];
+    } else if (textContent.includes('```')) {
+      jsonText = textContent.replace(/```\n?/g, '').trim();
+    }
+    
+    const result = JSON.parse(jsonText);
+    
+    return result;
 
-  // Parse Claude's response
-  const textContent = data.content[0].text;
-  
-  // Extract JSON from response (Claude might wrap it in markdown)
-  let jsonText = textContent;
-  const jsonMatch = textContent.match(/```json\n([\s\S]*?)\n```/);
-  if (jsonMatch) {
-    jsonText = jsonMatch[1];
-  } else if (textContent.includes('```')) {
-    jsonText = textContent.replace(/```\n?/g, '').trim();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Lava API request timed out after 120 seconds');
+    }
+    throw error;
   }
-  
-  const result = JSON.parse(jsonText);
-  
-  return result;
+}
+
+// ============================================================================
+// SECOND LAVA API CALL - FINALIZATION
+// ============================================================================
+
+async function callLavaFinalizationAPI(extractedData, humanContext, actionType) {
+  const finalizationInstructions = `You are creating a final, polished post for AgentOverflow from extracted conversation data and human context.
+
+CRITICAL: Follow this EXACT claude_solutions schema structure:
+
+{
+  "title": "[Compelling, SEO-friendly title that captures the core problem/solution]",
+  "problem": "[Clear description of the problem that was being solved]",
+  "context": "[Background context and situation that led to this problem]",
+  "solution": "[The main solution approach and implementation]",
+  "summary": "[2-3 sentence summary of the solution for quick understanding]",
+  "technical_description": "[Technical details, architecture, and implementation specifics]",
+  "technical_deep_context": "[Deep technical context, edge cases, and advanced considerations]",
+  "attempted_solutions": "[What was tried before finding the final solution]",
+  "error_messages": "[Specific error messages encountered and their meanings]",
+  "code_snippets": [
+    {
+      "code": "[Relevant code snippet]",
+      "description": "[Description of what this code does]"
+    }
+  ],
+  "tags": ["[technology]", "[framework]", "[concept]", "[error-type]", "[additional-relevant-tag]"],
+  "type": "${actionType}",
+  "share_link": "${extractedData.share_link || ''}",
+  "solution_id": "[Unique identifier for this solution]",
+  "author_id": "anonymous",
+  "created_at": "[Current ISO 8601 timestamp]"
+}
+
+IMPORTANT:
+- Combine the extracted data with human context seamlessly
+- Populate ALL fields - they are crucial for searchability and context
+- Make the content engaging and helpful for other developers
+- Ensure code_snippets is an array of objects with code and description
+- Include code examples if available in extracted data
+- Choose appropriate category and difficulty level
+- Use current timestamp for created_at
+- Return ONLY valid JSON with no markdown formatting`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
+
+  try {
+    const response = await fetch(
+      `${LAVA_BASE_URL}/forward?u=https://api.anthropic.com/v1/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${LAVA_FORWARD_TOKEN}`,
+          "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 4000,
+          temperature: 0.1,
+          messages: [
+            {
+              role: "user",
+              content: `${finalizationInstructions}
+
+EXTRACTED CONVERSATION DATA:
+${JSON.stringify(extractedData, null, 2)}
+
+HUMAN CONTEXT:
+${humanContext}
+
+Create a final, polished post combining the extracted data with the human context. Return ONLY valid JSON following the exact schema above.`
+            }
+          ]
+        }),
+        signal: controller.signal
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Lava API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    // Track usage
+    if (data.usage) {
+      usage.totalTokens += (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
+    }
+
+    // Parse Claude's response
+    const textContent = data.content[0].text;
+    
+    // Extract JSON from response (Claude might wrap it in markdown)
+    let jsonText = textContent;
+    const jsonMatch = textContent.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[1];
+    } else if (textContent.includes('```')) {
+      jsonText = textContent.replace(/```\n?/g, '').trim();
+    }
+    
+    const result = JSON.parse(jsonText);
+    
+    return result;
+
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Lava API request timed out after 120 seconds');
+    }
+    throw error;
+  }
 }
 
 // ============================================================================
@@ -199,6 +342,66 @@ app.get("/healthz", (_req, res) => {
     provider: "Lava + Claude Sonnet 3.5",
     usage 
   });
+});
+
+// Second Lava API call - Process Human Context + JSON
+app.post("/api/finalize-post", async (req, res) => {
+  // Set a timeout for the entire request
+  const requestTimeout = setTimeout(() => {
+    if (!res.headersSent) {
+      res.status(504).json({ 
+        ok: false, 
+        error: "Request timeout - processing took too long" 
+      });
+    }
+  }, 120000); // 2 minutes timeout
+
+  try {
+    const { extractedData, humanContext, actionType } = req.body || {};
+
+    // Validation
+    if (!extractedData || !humanContext) {
+      clearTimeout(requestTimeout);
+      return res.status(400).json({ 
+        ok: false, 
+        error: "Missing 'extractedData' or 'humanContext'" 
+      });
+    }
+
+    console.log(`\n${"=".repeat(80)}`);
+    console.log(`Finalizing post: ${actionType?.toUpperCase() || 'UNKNOWN'}`);
+    console.log(`Human context length: ${humanContext.length} chars`);
+    console.log("=".repeat(80));
+
+    // Process with Lava + Claude for final post
+    console.log("\n🔄 Processing with Lava + Claude (finalization)...");
+    const finalPostData = await callLavaFinalizationAPI(extractedData, humanContext, actionType);
+    
+    console.log("✓ Successfully created final post data");
+    console.log(`   - Title: ${finalPostData.title}`);
+    console.log(`   - Tags: ${finalPostData.tags?.join(", ")}`);
+
+    clearTimeout(requestTimeout);
+    res.json({ 
+      ok: true, 
+      result: finalPostData,
+      metadata: {
+        actionType,
+        humanContextLength: humanContext.length,
+        extractedDataKeys: Object.keys(extractedData)
+      }
+    });
+
+  } catch (error) {
+    console.error("\n❌ Error:", error.message);
+    clearTimeout(requestTimeout);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        ok: false, 
+        error: error.message || "Failed to finalize post" 
+      });
+    }
+  }
 });
 
 app.post("/api/process-conversation", async (req, res) => {
@@ -282,6 +485,49 @@ app.post("/api/process-conversation", async (req, res) => {
   }
 });
 
+app.post("/api/find-solution", async (req, res) => {
+  try {
+    const { problemDescription, context, tags } = req.body || {};
+
+    // Validation
+    if (!problemDescription || typeof problemDescription !== "string") {
+      return res.status(400).json({ 
+        ok: false, 
+        error: "Missing 'problemDescription' (required for finding solutions)" 
+      });
+    }
+
+    console.log(`\n${"=".repeat(80)}`);
+    console.log(`Finding solution for problem...`);
+    console.log(`Problem: ${problemDescription.substring(0, 100)}...`);
+    console.log("=".repeat(80));
+
+    // Query the Elasticsearch agent
+    console.log("\n🔍 Querying Elasticsearch agent...");
+    const solution = await queryElasticsearchAgent(problemDescription, context, tags);
+    
+    console.log("✅ Solution found!");
+    console.log(`   - Solution length: ${solution.length} chars`);
+
+    res.json({ 
+      ok: true, 
+      solution: solution,
+      metadata: {
+        problemLength: problemDescription.length,
+        contextProvided: !!context,
+        tagsProvided: tags ? tags.length : 0
+      }
+    });
+
+  } catch (error) {
+    console.error("\n❌ Error:", error.message);
+    res.status(500).json({ 
+      ok: false, 
+      error: error.message || "Failed to find solution" 
+    });
+  }
+});
+
 // ============================================================================
 // START SERVER
 // ============================================================================
@@ -310,3 +556,92 @@ app.listen(PORT, () => {
 ╚═══════════════════════════════════════════════════════════════════╝
   `);
 });
+
+// Helper function to query Elasticsearch agent
+async function queryElasticsearchAgent(problemDescription, context, tags) {
+  const ES_ENDPOINT = process.env.ELASTICSEARCH_ENDPOINT;
+  const ES_API_KEY = process.env.ELASTICSEARCH_API_KEY;
+  const AGENT_ID = "claude_solution_finder";
+
+  if (!ES_ENDPOINT || !ES_API_KEY) {
+    throw new Error("Missing Elasticsearch configuration (ELASTICSEARCH_ENDPOINT, ELASTICSEARCH_API_KEY)");
+  }
+
+  // Build a comprehensive prompt from the problem description
+  let prompt = `I'm working on the following problem:\n\n${problemDescription}`;
+  
+  if (context) {
+    prompt += `\n\nContext:\n${context}`;
+  }
+  
+  if (tags && tags.length > 0) {
+    prompt += `\n\nRelevant technologies: ${tags.join(', ')}`;
+  }
+  
+  prompt += `\n\nPlease search your knowledge base for similar problems and provide a detailed solution. If you find a relevant solution, include code examples and explanations. If the problem is unique, provide guidance based on best practices.`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180000); // 180 second timeout
+
+  try {
+    const response = await fetch(
+      `${ES_ENDPOINT}/api/agent_builder/converse`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `ApiKey ${ES_API_KEY}`,
+          "Content-Type": "application/json",
+          "kbn-xsrf": "true"
+        },
+        body: JSON.stringify({
+          agent_id: AGENT_ID,
+          input: prompt
+        }),
+        signal: controller.signal
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Elasticsearch agent error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    // Extract the solution text from the agent response
+    // The response structure may vary, so we need to handle it
+    let solutionText = "";
+    
+    if (data.response) {
+      // If response is directly available
+      solutionText = data.response;
+    } else if (data.answer) {
+      // If answer field is available
+      solutionText = data.answer;
+    } else if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+      // If messages array is available, get the last message
+      const lastMessage = data.messages[data.messages.length - 1];
+      solutionText = lastMessage.content || lastMessage.message || JSON.stringify(lastMessage);
+    } else {
+      // Fallback: stringify the whole response
+      solutionText = JSON.stringify(data, null, 2);
+    }
+
+    // Track usage
+    if (data.usage) {
+      usage.totalTokens += (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0);
+    }
+    usage.totalCalls += 1;
+
+    return solutionText;
+
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Elasticsearch agent query timed out after 180 seconds');
+    }
+    throw error;
+  }
+}

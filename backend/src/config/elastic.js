@@ -58,6 +58,7 @@ export const elasticClient = createElasticClient();
 // Index names (matching your schema)
 export const INDICES = {
   POSTS_AI: 'posts_ai',
+  CLAUDE_SOLUTIONS: 'claude_solutions',
   USER_POST_MAP: 'user_post_map',
   POST_EDGES: 'post_edges',
   USERS: 'users'
