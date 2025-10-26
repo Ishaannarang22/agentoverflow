@@ -199,7 +199,7 @@ export const EditablePostForm = ({ initialData, onDataChange }: EditablePostForm
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer group"
+                  className="bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer group"
                   onClick={() => removeTag(tag)}
                 >
                   {tag}
@@ -230,7 +230,7 @@ export const EditablePostForm = ({ initialData, onDataChange }: EditablePostForm
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="bg-blue-100 text-blue-800"
+                  className="bg-gray-100 text-gray-700"
                 >
                   {tag}
                 </Badge>

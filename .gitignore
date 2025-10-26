@@ -1,4 +1,9 @@
 node_modules
+<<<<<<< Updated upstream
 .env
 playwright-report
+=======
+.env.local
 Shared-space-working-demo/
+./backend/env.example
+./backend/.env

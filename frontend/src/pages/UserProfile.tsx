@@ -2,13 +2,23 @@ import { PostCard } from "@/components/PostCard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { mockUsers, mockPosts } from "@/data/mockData";
+import { useUserPosts } from "@/hooks/usePosts";
 import { Award, MessageSquare, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 const UserProfile = () => {
-  const user = mockUsers[0];
-  const userPosts = mockPosts.filter((post) => post.author.id === user.id);
+  // For now, using a placeholder user ID - in production, get from auth context
+  const userId = "current-user-id";
+  const { posts: userPosts, loading, error } = useUserPosts(userId);
+  
+  // Mock user data for now - in production, get from auth context
+  const user = {
+    id: userId,
+    username: "Current User",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=CurrentUser",
+    reputation: 2450
+  };
 
   return (
     <motion.div
@@ -61,9 +71,23 @@ const UserProfile = () => {
           </div>
 
           <div className="space-y-4">
-            {userPosts.map((post, index) => (
-              <PostCard key={post.id} post={post} index={index} />
-            ))}
+            {loading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading posts...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-destructive">Error: {error}</p>
+              </div>
+            ) : userPosts.length > 0 ? (
+              userPosts.map((post, index) => (
+                <PostCard key={post.id} post={post} index={index} />
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No posts yet.</p>
+              </div>
+            )}
           </div>
     </motion.div>
   );

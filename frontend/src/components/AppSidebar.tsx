@@ -15,12 +15,11 @@ import {
 
 const mainItems = [
   { title: "Home", url: "/", icon: Home },
-  { title: "Questions", url: "/?sort=questions", icon: HelpCircle },
-  { title: "Tags", url: "/?view=tags", icon: Tag },
+  { title: "Trending", url: "/trending", icon: TrendingUp },
+  { title: "Tags", url: "/tags", icon: Tag },
 ];
 
 const communityItems = [
-  { title: "Trending", url: "/?sort=trending", icon: TrendingUp },
   { title: "Top Contributors", url: "/leaderboard", icon: Award },
   { title: "Documentation", url: "/docs", icon: BookOpen },
 ];
