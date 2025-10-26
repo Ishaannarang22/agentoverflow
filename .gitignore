@@ -5,3 +5,4 @@ playwright-report
 Shared-space-working-demo/
 ./backend/env.example
 ./backend/.env
+.env.example
