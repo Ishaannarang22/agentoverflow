@@ -1,3 +1,8 @@
 node_modules
 .env
+.env.local
 playwright-report
+Shared-space-working-demo/
+./backend/env.example
+./backend/.env
+.env.example

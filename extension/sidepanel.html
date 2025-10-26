@@ -17,111 +17,144 @@
     
     /* Light mode (default) */
     body {
-      background: #F5F5F3;
-      color: #2D2D2D;
+      background: #FFFFFF;
+      color: #212121;
     }
     
     /* Dark mode */
     @media (prefers-color-scheme: dark) {
       body {
-        background: #1A1A1A;
-        color: #E5E5E0;
+        background: #1E1E1E;
+        color: #E8E8E8;
       }
       
       .header {
-        background: #2D2D2D !important;
-        border-bottom-color: #3D3D3D !important;
+        background: #252525 !important;
+        border-bottom-color: #F48024 !important;
       }
       
       .header h1 {
-        color: #E5E5E0 !important;
+        color: #E8E8E8 !important;
       }
       
       .header p {
-        color: #A8A8A0 !important;
+        color: #9AA0A6 !important;
       }
       
       button {
         background: #2D2D2D !important;
-        border-color: #3D3D3D !important;
-        color: #E5E5E0 !important;
+        border-color: #404040 !important;
+        color: #E8E8E8 !important;
       }
       
       button:hover {
-        background: #3D3D3D !important;
-        border-color: #4D4D4D !important;
+        background: #353535 !important;
+        border-color: #F48024 !important;
+      }
+      
+      #shareBtn {
+        background: #F48024 !important;
+        border-color: #F48024 !important;
+      }
+      
+      #shareBtn:hover {
+        background: #E6721A !important;
+        border-color: #E6721A !important;
+      }
+      
+      #findBtn {
+        background: #2D2D2D !important;
+        color: #F48024 !important;
+        border-color: #F48024 !important;
+      }
+      
+      #findBtn:hover {
+        background: #2A1F0F !important;
+        border-color: #F48024 !important;
       }
       
       #status {
         background: #2D2D2D !important;
-        border-color: #3D3D3D !important;
+        border-color: #404040 !important;
       }
       
       #status.success {
-        background: #1E3A2E !important;
-        border-color: #2E5A4E !important;
-        color: #86EFAC !important;
+        background: #1A2E1F !important;
+        border-color: #48C774 !important;
+        color: #6FD89A !important;
       }
       
       #status.error {
-        background: #3A1E1E !important;
-        border-color: #5A2E2E !important;
-        color: #FECACA !important;
+        background: #2E1A1A !important;
+        border-color: #F56565 !important;
+        color: #FEB2B2 !important;
       }
       
       .saved-links {
-        border-top-color: #3D3D3D !important;
+        border-top-color: #404040 !important;
       }
       
       .saved-links h2 {
-        color: #E5E5E0 !important;
+        color: #E8E8E8 !important;
       }
       
       .link-item {
         background: #2D2D2D !important;
-        border-color: #3D3D3D !important;
+        border-color: #404040 !important;
+      }
+      
+      .link-item:hover {
+        border-color: #F48024 !important;
+      }
+      
+      .link-item .link-type {
+        color: #F48024 !important;
+      }
+      
+      .link-item .link-type.find {
+        color: #64B5F6 !important;
       }
       
       .link-item .link-url {
-        color: #A8A8A0 !important;
+        color: #9AA0A6 !important;
       }
       
       .link-item .link-time {
-        color: #706F6C !important;
+        color: #6E7C7E !important;
       }
       
       .download-btn {
-        background: #E5E5E0 !important;
-        color: #1A1A1A !important;
+        background: #5F6368 !important;
+        color: #E8E8E8 !important;
       }
       
       .download-btn:hover {
-        background: #D4D4D0 !important;
+        background: #707478 !important;
       }
       
       .loader {
-        border-color: #3D3D3D !important;
-        border-top-color: #A16207 !important;
+        border-color: #404040 !important;
+        border-top-color: #F48024 !important;
       }
     }
     
     /* Header */
     .header {
-      background: white;
-      border-bottom: 1px solid #E5E5E0;
+      background: #F9F9F9;
+      border-bottom: 2px solid #F48024;
       padding: 20px;
     }
     
     .header h1 {
-      font-size: 18px;
-      font-weight: 600;
-      color: #2D2D2D;
+      font-size: 20px;
+      font-weight: 700;
+      color: #212121;
       margin-bottom: 6px;
     }
     
     .header p {
       font-size: 13px;
-      color: #706F6C;
+      color: #5F6368;
     }
     
     /* Content */
@@ -141,83 +174,117 @@
     button {
       padding: 14px 16px;
       font-size: 14px;
-      font-weight: 500;
-      border: 1px solid #D4D4D0;
-      border-radius: 8px;
+      font-weight: 600;
+      border: 1px solid #E5E5E5;
+      border-radius: 6px;
       cursor: pointer;
       transition: all 0.15s ease;
       background: white;
-      color: #2D2D2D;
+      color: #212121;
       display: flex;
       align-items: center;
       gap: 10px;
       font-family: inherit;
       text-align: left;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     
     button:hover {
-      background: #F8F8F6;
-      border-color: #A8A8A0;
+      background: #F9F9F9;
+      border-color: #F48024;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     button:active {
       transform: scale(0.98);
     }
     
+    #shareBtn {
+      background: #F48024;
+      color: white;
+      border-color: #F48024;
+    }
+    
+    #shareBtn:hover {
+      background: #E6721A;
+      border-color: #E6721A;
+    }
+    
+    #findBtn {
+      background: white;
+      color: #F48024;
+      border-color: #F48024;
+    }
+    
+    #findBtn:hover {
+      background: #FFF4E6;
+      border-color: #F48024;
+    }
+    
     /* Status box */
     #status {
       padding: 16px;
       background: white;
-      border: 1px solid #D4D4D0;
-      border-radius: 8px;
+      border: 1px solid #E5E5E5;
+      border-radius: 6px;
       font-size: 13px;
       display: none;
       line-height: 1.6;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
     #status.success {
-      background: #F0FDF4;
-      border-color: #86EFAC;
-      color: #166534;
+      background: #F0F9F4;
+      border-color: #48C774;
+      color: #1D5D2F;
     }
     
     #status.error {
       background: #FEF2F2;
-      border-color: #FECACA;
-      color: #991B1B;
+      border-color: #F56565;
+      color: #C53030;
     }
     
     /* Saved links section */
     .saved-links {
       margin-top: 24px;
       padding-top: 24px;
-      border-top: 1px solid #E5E5E0;
+      border-top: 2px solid #E5E5E5;
     }
     
     .saved-links h2 {
-      font-size: 14px;
-      font-weight: 600;
-      color: #2D2D2D;
+      font-size: 15px;
+      font-weight: 700;
+      color: #212121;
       margin-bottom: 12px;
     }
     
     .link-item {
       background: white;
-      border: 1px solid #E5E5E0;
+      border: 1px solid #E5E5E5;
       border-radius: 6px;
       padding: 12px;
       margin-bottom: 8px;
       font-size: 12px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+    
+    .link-item:hover {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-color: #F48024;
     }
     
     .link-item .link-type {
-      font-weight: 600;
-      color: #A16207;
+      font-weight: 700;
+      color: #F48024;
       margin-bottom: 4px;
+      font-size: 13px;
     }
     
     .link-item .link-type.find {
-      color: #1E40AF;
+      color: #1857B2;
     }
     
     .link-item .link-url {
@@ -234,8 +301,8 @@
     }
     
     .loader {
-      border: 2px solid #E5E5E0;
-      border-top: 2px solid #A16207;
+      border: 2px solid #E5E5E5;
+      border-top: 2px solid #F48024;
       border-radius: 50%;
       width: 20px;
       height: 20px;
@@ -251,15 +318,16 @@
     
     .download-btn {
       margin-top: 12px;
-      background: #2D2D2D;
+      background: #5F6368;
       color: white;
       border: none;
       font-size: 13px;
       justify-content: center;
+      font-weight: 600;
     }
     
     .download-btn:hover {
-      background: #1A1A1A;
+      background: #424548;
     }
   </style>
 </head>
@@ -271,8 +339,8 @@
   
   <div class="content">
     <div class="buttons">
-      <button id="shareBtn">Share Solution</button>
-      <button id="findBtn">Find Solution</button>
+      <button id="shareBtn">📤 Share Solution</button>
+      <button id="findBtn">🔍 Find Solution</button>
     </div>
     
     <div id="status"></div>
