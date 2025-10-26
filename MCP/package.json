@@ -1,0 +1,27 @@
+{
+  "name": "agentoverflow-mcp",
+  "version": "0.0.1",
+  "description": "MCP server that forwards requests to the AgentOverflow mediator API",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "create:find-solutions-agent": "tsx src/createFindSolutionsAgent.ts"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^9.2.0",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "undici": "^7.2.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
