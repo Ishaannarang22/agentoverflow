@@ -9,7 +9,7 @@ async function scrapeClaudeChat(url) {
   console.log(`🔍 Scraping: ${url}`);
   
   const browser = await chromium.launch({ 
-    headless: true, // Use headed mode to avoid Cloudflare detection
+    headless: true,
     args: [
       '--disable-blink-features=AutomationControlled',
       '--disable-dev-shm-usage',

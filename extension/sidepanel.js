@@ -21,7 +21,7 @@ async function handleChoice(type) {
   const status = document.getElementById('status');
   status.style.display = 'block';
   status.className = '';
-  status.innerHTML = '<div class="loader"></div>Processing...';
+  status.innerHTML = '<div class="loader"></div>Getting share link...';
   
   // Get the active tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -30,26 +30,68 @@ async function handleChoice(type) {
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: getShareLink
-  }, (results) => {
+  }, async (results) => {
     if (results && results[0] && results[0].result) {
       const shareLink = results[0].result;
       
       // Copy to clipboard
       navigator.clipboard.writeText(shareLink);
       
+      console.log("Link copied:", shareLink);
+      
       // Save to storage
       saveLink(shareLink, type);
       
-      status.className = 'success';
-      status.innerHTML = `
-        Link copied to clipboard!<br>
-        <small style="margin-top: 8px; display: block; opacity: 0.8;">${shareLink}</small>
-      `;
+      // Call backend API
+      status.innerHTML = '<div class="loader"></div>Processing with backend...';
       
-      console.log("Link copied:", shareLink);
-      
-      // Reload the saved links list
-      loadSavedLinks();
+      try {
+        const response = await fetch('http://localhost:3001/api/process-conversation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: shareLink,
+            action: type
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          status.className = 'success';
+          status.innerHTML = `
+            ✅ Successfully processed!<br>
+            <small style="margin-top: 8px; display: block; opacity: 0.8;">
+              Title: ${data.result.title}<br>
+              Tags: ${data.result.tags?.join(', ') || 'None'}<br>
+              ${data.cached ? '(From cache)' : ''}
+            </small>
+          `;
+          
+          // Save the full result with the link
+          saveLinkWithResult(shareLink, type, data.result);
+          
+          console.log("Backend processing complete:", data);
+        } else {
+          throw new Error(data.error || 'Backend processing failed');
+        }
+        
+        // Reload the saved links list
+        loadSavedLinks();
+        
+      } catch (error) {
+        console.error("Backend error:", error);
+        status.className = 'error';
+        status.innerHTML = `
+          ❌ Backend processing failed<br>
+          <small style="margin-top: 8px; display: block; opacity: 0.8;">
+            ${error.message}<br>
+            Make sure the backend is running on port 3001
+          </small>
+        `;
+      }
       
     } else {
       status.className = 'error';
@@ -113,6 +155,40 @@ function saveLink(url, type) {
   });
 }
 
+// Save link with backend processing result
+function saveLinkWithResult(url, type, result) {
+  const timestamp = new Date().toISOString();
+  const link = {
+    url: url,
+    type: type,
+    timestamp: timestamp,
+    result: result // Include the full backend result
+  };
+  
+  // Get existing links
+  chrome.storage.local.get(['links'], (data) => {
+    const links = data.links || [];
+    
+    // Find and update existing link, or add new one
+    const existingIndex = links.findIndex(l => l.url === url && l.type === type);
+    if (existingIndex !== -1) {
+      links[existingIndex] = link;
+    } else {
+      links.unshift(link);
+    }
+    
+    // Keep only last 50 links
+    if (links.length > 50) {
+      links.length = 50;
+    }
+    
+    // Save back to storage
+    chrome.storage.local.set({ links: links }, () => {
+      console.log("Link with result saved:", link);
+    });
+  });
+}
+
 // Load and display saved links
 function loadSavedLinks() {
   chrome.storage.local.get(['links'], (result) => {
@@ -133,11 +209,30 @@ function loadSavedLinks() {
           minute: '2-digit' 
         });
         
+        // Display backend result if available
+        let resultHtml = '';
+        if (link.result) {
+          resultHtml = `
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #E5E5E0;">
+              <div style="font-weight: 600; color: #2D2D2D; margin-bottom: 4px;">${link.result.title}</div>
+              ${link.result.tags && link.result.tags.length > 0 ? 
+                `<div style="font-size: 10px; color: #A16207; margin-bottom: 4px;">
+                  ${link.result.tags.map(tag => `<span style="background: #FEF3C7; padding: 2px 6px; border-radius: 3px; margin-right: 4px;">${tag}</span>`).join('')}
+                </div>` 
+                : ''}
+              ${link.result.problem ? 
+                `<div style="font-size: 11px; color: #706F6C; line-height: 1.4;">${link.result.problem}</div>` 
+                : ''}
+            </div>
+          `;
+        }
+        
         return `
           <div class="link-item">
-            <div class="link-type ${link.type}">${link.type === 'share' ? 'Share' : 'Find'}</div>
+            <div class="link-type ${link.type}">${link.type === 'share' ? '✅ Share' : '🔍 Find'}</div>
             <div class="link-url">${link.url}</div>
             <div class="link-time">${timeStr}</div>
+            ${resultHtml}
           </div>
         `;
       }).join('');
