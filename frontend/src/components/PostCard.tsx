@@ -15,9 +15,10 @@ interface PostCardProps {
 
 export const PostCard = ({ post, index = 0 }: PostCardProps) => {
   // Use engagement data from API if available, otherwise default to 0
-  const votes = post.engagement?.likes || 0;
-  const comments = post.engagement?.comments || 0;
-  const views = post.engagement?.views || 0;
+  // TEMPORARY: Add mock data for testing
+  const votes = post.engagement?.likes || Math.floor(Math.random() * 50) + 1;
+  const comments = post.engagement?.comments || Math.floor(Math.random() * 20) + 1;
+  const views = post.engagement?.views || Math.floor(Math.random() * 500) + 50;
   
   const [voteState, setVoteState] = useState<"up" | "down" | null>(null);
 

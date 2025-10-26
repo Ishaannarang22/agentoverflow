@@ -69,14 +69,47 @@ router.get('/posts', async (req, res) => {
 
     const response = await elasticClient.search(searchQuery);
     
+    // Get post edges for engagement data
+    const postIds = response.hits.hits.map(hit => hit._id);
+    console.log('Post IDs:', postIds);
+    let edgesResponse = { docs: [] };
+    
+    if (postIds.length > 0) {
+      try {
+        edgesResponse = await elasticClient.mget({
+          index: INDICES.POST_EDGES,
+          body: {
+            ids: postIds
+          }
+        });
+        console.log('Edges response:', edgesResponse.docs.length, 'docs found');
+      } catch (edgesError) {
+        console.warn('Could not fetch engagement data:', edgesError.message);
+      }
+    }
+
+    // Combine posts with engagement data
+    const postsWithEngagement = response.hits.hits.map(hit => {
+      const edgesDoc = edgesResponse.docs.find(doc => doc._id === hit._id);
+      const engagement = edgesDoc?.found ? edgesDoc._source.counts : {
+        likes: 0,
+        dislikes: 0,
+        comments: 0,
+        views: 0
+      };
+
+      return {
+        id: hit._id,
+        ...hit._source,
+        score: hit._score,
+        engagement
+      };
+    });
+    
     res.json({
       success: true,
       data: {
-        posts: response.hits.hits.map(hit => ({
-          id: hit._id,
-          ...hit._source,
-          score: hit._score
-        })),
+        posts: postsWithEngagement,
         total: response.hits.total.value,
         page: parseInt(page),
         limit: parseInt(limit),

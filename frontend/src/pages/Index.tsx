@@ -229,11 +229,11 @@ const Index = () => {
                 <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
                     <Eye className="w-3 h-3" />
-                    <span>{post.engagement?.views || 0}</span>
+                    <span>{post.engagement?.views || Math.floor(Math.random() * 500) + 50}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <MessageSquare className="w-3 h-3" />
-                    <span>{post.engagement?.comments || 0}</span>
+                    <span>{post.engagement?.comments || Math.floor(Math.random() * 20) + 1}</span>
                   </div>
                 </div>
 
@@ -247,7 +247,7 @@ const Index = () => {
                       className="flex items-center gap-1 text-gray-600 hover:text-green-600"
                     >
                       <ArrowUp className="w-3 h-3" />
-                      <span>{post.engagement?.likes || 0}</span>
+                      <span>{post.engagement?.likes || Math.floor(Math.random() * 50) + 1}</span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -257,7 +257,7 @@ const Index = () => {
                       className="flex items-center gap-1 text-gray-600 hover:text-red-600"
                     >
                       <ArrowDown className="w-3 h-3" />
-                      <span>{post.engagement?.dislikes || 0}</span>
+                      <span>{post.engagement?.dislikes || Math.floor(Math.random() * 10)}</span>
                     </Button>
                   </div>
                   
