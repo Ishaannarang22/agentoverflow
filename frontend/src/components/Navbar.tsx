@@ -1,12 +1,36 @@
-import { Search, Plus, User, Sparkles } from "lucide-react";
+import { Search, Plus, User, Sparkles, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const Navbar = () => {
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    await logout();
+    toast({
+      title: 'Logged out',
+      description: 'You have been successfully logged out.',
+    });
+  };
+
+  const getUserInitials = (username: string) => {
+    return username.charAt(0).toUpperCase();
+  };
 
   return (
     <motion.header
@@ -56,20 +80,54 @@ export const Navbar = () => {
               <span className="hidden sm:inline">Submit</span>
             </Button>
           </Link>
-          <Link to="/profile">
-            <Button
-              variant={location.pathname === "/profile" ? "default" : "ghost"}
-              size="sm"
-              className={`gap-2 transition-all ${
-                location.pathname === "/profile" 
-                  ? "bg-green-500 hover:bg-green-600 text-white" 
-                  : "text-black hover:bg-green-50"
-              }`}
-            >
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </Button>
-          </Link>
+          
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.avatar_url} alt={user?.username} />
+                    <AvatarFallback className="bg-orange-500 text-white text-xs">
+                      {user?.username?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    <p className="font-medium">{user?.username}</p>
+                    <p className="w-[200px] truncate text-sm text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/login">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-gray-300 text-black hover:bg-orange-50"
+              >
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">Login</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </nav>
     </motion.header>

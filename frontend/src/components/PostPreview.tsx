@@ -63,33 +63,33 @@ export const PostPreview = ({ postData, onEdit, onPublish }: PostPreviewProps) =
 
               {/* Full Content Display */}
               <div className="space-y-4 mb-6">
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
-                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <div className="bg-gray-50 border-l-4 border-gray-300 p-4 rounded-r-lg">
+                  <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                     <Code className="w-4 h-4" />
                     Problem
                   </h3>
-                  <p className="text-blue-800 text-sm leading-relaxed">
+                  <p className="text-gray-700 text-sm leading-relaxed">
                     {postData.context}
                   </p>
                 </div>
 
-                <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
-                  <h3 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                <div className="bg-gray-50 border-l-4 border-gray-300 p-4 rounded-r-lg">
+                  <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                     <Code className="w-4 h-4" />
                     Solution
                   </h3>
-                  <p className="text-green-800 text-sm leading-relaxed">
+                  <p className="text-gray-700 text-sm leading-relaxed">
                     {postData.solution}
                   </p>
                 </div>
 
                 {postData.architecture && (
-                  <div className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-lg">
-                    <h3 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                  <div className="bg-gray-50 border-l-4 border-gray-300 p-4 rounded-r-lg">
+                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                       <Code className="w-4 h-4" />
                       Architecture
                     </h3>
-                    <p className="text-purple-800 text-sm leading-relaxed">
+                    <p className="text-gray-700 text-sm leading-relaxed">
                       {postData.architecture}
                     </p>
                   </div>
@@ -104,7 +104,7 @@ export const PostPreview = ({ postData, onEdit, onPublish }: PostPreviewProps) =
                     <Badge
                       key={index}
                       variant="secondary"
-                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer transition-all"
+                      className="bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer transition-all"
                     >
                       {tag}
                     </Badge>

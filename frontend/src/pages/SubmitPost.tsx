@@ -20,6 +20,8 @@ const SubmitPost = () => {
   const [chatData, setChatData] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [problemDescription, setProblemDescription] = useState("");
+  const [solutionDescription, setSolutionDescription] = useState("");
   const [postData, setPostData] = useState({
     headline: "",
     context: "",
@@ -58,8 +60,8 @@ const SubmitPost = () => {
   };
 
   const handleChatData = (messages: any[]) => {
+    // Just store the chat data, don't process it yet
     setChatData(messages);
-    processWithAI(messages);
   };
 
   const handlePostDataChange = (data: any) => {
@@ -67,7 +69,21 @@ const SubmitPost = () => {
   };
 
   const handleNext = () => {
-    if (currentStep < totalSteps - 1) {
+    if (currentStep === 0 && chatData.length > 0 && !isProcessing) {
+      // When moving from step 0 to step 1, trigger AI processing
+      processWithAI(chatData);
+      // processWithAI will set currentStep to 1 when done
+    } else if (currentStep === 0 && chatData.length === 0) {
+      // If no chat data, use mock data and move to step 1
+      setPostData({
+        headline: "How to Fix React useEffect Infinite Loop with Object Dependencies",
+        context: "I was experiencing an infinite loop in my React useEffect hook. The dependency array included a state variable that was changing on every render, causing the effect to run continuously.",
+        solution: "The issue was caused by including an object in the dependency array that gets recreated on every render. I solved it by using useMemo to memoize the object or by restructuring the dependencies to only include primitive values.",
+        architecture: "Used useMemo hook to memoize the filters object, ensuring it only changes when the actual filter values change, not on every render.",
+        tags: ["React", "JavaScript", "useEffect", "Performance", "Hooks"]
+      });
+      setCurrentStep(1);
+    } else if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -86,7 +102,7 @@ const SubmitPost = () => {
   const canGoNext = (): boolean => {
     switch (currentStep) {
       case 0:
-        return chatData.length > 0;
+        return !isProcessing && problemDescription.trim() !== "" && solutionDescription.trim() !== "";
       case 1:
         return !isProcessing && postData.headline.trim() !== "" && postData.context.trim() !== "";
       case 2:
@@ -132,6 +148,8 @@ const SubmitPost = () => {
                     <Textarea
                       placeholder="Describe the issue you encountered while coding with LLMs (hallucinations, wrong code, context issues, etc.)..."
                       className="min-h-[120px]"
+                      value={problemDescription}
+                      onChange={(e) => setProblemDescription(e.target.value)}
                     />
                   </div>
                   
@@ -142,6 +160,8 @@ const SubmitPost = () => {
                     <Textarea
                       placeholder="Explain your solution approach, prompts, or techniques that worked..."
                       className="min-h-[120px]"
+                      value={solutionDescription}
+                      onChange={(e) => setSolutionDescription(e.target.value)}
                     />
                   </div>
                 </div>

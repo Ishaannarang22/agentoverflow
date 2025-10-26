@@ -1,99 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, User, Bot } from "lucide-react";
-import { motion } from "framer-motion";
-
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string;
-}
+import { Input } from "@/components/ui/input";
+import { Bot, Loader2 } from "lucide-react";
 
 interface ChatPreviewProps {
-  onChatData: (messages: ChatMessage[]) => void;
+  onChatData: (messages: any[]) => void;
+  initialUrl?: string;
 }
 
-export const ChatPreview = ({ onChatData }: ChatPreviewProps) => {
-  const [chatText, setChatText] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+// Mock JSON data to display
+const mockJsonData = [
+  { role: "user", content: "How do I fix a React infinite loop?", timestamp: "2024-01-15T10:30:00Z" },
+  { role: "assistant", content: "You can use useCallback or useMemo to prevent re-renders", timestamp: "2024-01-15T10:30:15Z" },
+  { role: "user", content: "Can you show me an example?", timestamp: "2024-01-15T10:31:00Z" },
+  { role: "assistant", content: "Here's how: ```const memoized = useMemo(() => value, [deps])```", timestamp: "2024-01-15T10:31:30Z" },
+  { role: "user", content: "Thanks! That works perfectly.", timestamp: "2024-01-15T10:32:00Z" }
+];
 
-  const parseChatText = (text: string): ChatMessage[] => {
-    // Mock parsing - in real implementation, this would parse Claude chat exports
-    const lines = text.split('\n').filter(line => line.trim());
-    const parsedMessages: ChatMessage[] = [];
-    
-    let currentMessage: ChatMessage | null = null;
-    
-    lines.forEach((line, index) => {
-      if (line.startsWith('Human:') || line.startsWith('User:')) {
-        if (currentMessage) parsedMessages.push(currentMessage);
-        currentMessage = {
-          id: `user-${index}`,
-          role: "user",
-          content: line.replace(/^(Human:|User:)\s*/, ''),
-          timestamp: new Date().toISOString()
-        };
-      } else if (line.startsWith('Assistant:') || line.startsWith('Claude:')) {
-        if (currentMessage) parsedMessages.push(currentMessage);
-        currentMessage = {
-          id: `assistant-${index}`,
-          role: "assistant",
-          content: line.replace(/^(Assistant:|Claude:)\s*/, ''),
-          timestamp: new Date().toISOString()
-        };
-      } else if (currentMessage) {
-        currentMessage.content += '\n' + line;
-      }
-    });
-    
-    if (currentMessage) parsedMessages.push(currentMessage);
-    return parsedMessages;
-  };
+export const ChatPreview = ({ onChatData, initialUrl = "" }: ChatPreviewProps) => {
+  const [webpageUrl, setWebpageUrl] = useState(initialUrl);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [jsonData, setJsonData] = useState<any[]>([]);
 
-  const handleProcessChat = async () => {
-    if (!chatText.trim()) return;
-    
-    setIsProcessing(true);
-    
-    // Simulate processing delay
-    setTimeout(() => {
-      const parsedMessages = parseChatText(chatText);
-      setMessages(parsedMessages);
-      onChatData(parsedMessages);
-      setIsProcessing(false);
-    }, 1000);
-  };
-
-  const mockMessages: ChatMessage[] = [
-    {
-      id: "1",
-      role: "user",
-      content: "I'm getting an infinite loop in my React useEffect. The dependency array includes a state variable that changes on every render.",
-      timestamp: "2024-01-15T10:30:00Z"
-    },
-    {
-      id: "2",
-      role: "assistant",
-      content: "This is a common React issue! The problem is likely that you're including an object or array in your dependency array that gets recreated on every render. Here are a few solutions:\n\n1. **Use useCallback for functions**\n2. **Use useMemo for objects/arrays**\n3. **Move the dependency outside the component**\n\nCan you show me your current useEffect code?",
-      timestamp: "2024-01-15T10:30:15Z"
-    },
-    {
-      id: "3",
-      role: "user",
-      content: "Here's my code:\n```javascript\nuseEffect(() => {\n  fetchData(user.id, filters);\n}, [user.id, filters]);\n```\n\nThe `filters` object is created inline in the component.",
-      timestamp: "2024-01-15T10:31:00Z"
-    },
-    {
-      id: "4",
-      role: "assistant",
-      content: "Exactly! The `filters` object is recreated on every render, causing the infinite loop. Here's how to fix it:\n\n```javascript\n// Option 1: Use useMemo\nconst memoizedFilters = useMemo(() => filters, [filter1, filter2, filter3]);\n\nuseEffect(() => {\n  fetchData(user.id, memoizedFilters);\n}, [user.id, memoizedFilters]);\n\n// Option 2: Move filters outside useEffect\nuseEffect(() => {\n  const currentFilters = { filter1, filter2, filter3 };\n  fetchData(user.id, currentFilters);\n}, [user.id, filter1, filter2, filter3]);\n```",
-      timestamp: "2024-01-15T10:31:30Z"
+  // Auto-load data when component mounts or URL changes
+  useEffect(() => {
+    if (initialUrl) {
+      loadData(initialUrl);
     }
-  ];
+  }, [initialUrl]);
+
+  const loadData = async (url: string) => {
+    if (!url.trim()) return;
+    
+    setIsLoadingPreview(true);
+    
+    try {
+      // Simulate loading
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // For now, use mock data
+      // In production, this would fetch JSON from the URL
+      setJsonData(mockJsonData);
+      
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  const handleLoadPreview = async () => {
+    await loadData(webpageUrl);
+  };
+
+  // Note: onChatData is called from the parent's handleChatData when data is loaded
+  // We don't call it automatically here to avoid premature step navigation
 
   return (
     <div className="h-full flex flex-col">
@@ -102,96 +64,99 @@ export const ChatPreview = ({ onChatData }: ChatPreviewProps) => {
         <span className="font-medium text-gray-900">LLM Chat Preview</span>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto space-y-3 pr-2">
-          {messages.length > 0 ? (
-            messages.map((message, index) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+      <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Enter LLM Chat Share Link
+          </label>
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              placeholder="https://chat.openai.com/share/abc123..."
+              value={webpageUrl}
+              onChange={(e) => setWebpageUrl(e.target.value)}
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleLoadPreview();
+                }
+              }}
+            />
+            <Button 
+              onClick={handleLoadPreview}
+              disabled={!webpageUrl.trim() || isLoadingPreview}
+            >
+              {isLoadingPreview ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Load"
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {jsonData.length > 0 ? (
+          <div className="flex-1 flex flex-col overflow-hidden border border-gray-200 rounded-lg bg-white">
+            <div className="flex-1 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Role</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Content</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700 border-b">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jsonData.map((item, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 border-b">
+                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                          item.role === 'user' 
+                            ? 'bg-gray-100 text-gray-700' 
+                            : 'bg-gray-200 text-gray-800'
+                        }`}>
+                          {item.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-b text-gray-700 whitespace-pre-wrap max-w-md">
+                        {item.content}
+                      </td>
+                      <td className="px-4 py-3 border-b text-gray-500 text-xs">
+                        {new Date(item.timestamp).toLocaleTimeString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="border-t p-4 flex flex-col gap-2 bg-white">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setJsonData([]);
+                  setWebpageUrl("");
+                }}
               >
-                <Card className={`p-4 ${
-                  message.role === 'user' 
-                    ? 'bg-blue-50 border-blue-200 ml-8' 
-                    : 'bg-white border-gray-200 mr-8'
-                }`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.role === 'user' 
-                        ? 'bg-blue-500' 
-                        : 'bg-orange-500'
-                    }`}>
-                      {message.role === 'user' ? (
-                        <User className="w-4 h-4 text-white" />
-                      ) : (
-                        <Bot className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-sm">
-                          {message.role === 'user' ? 'You' : 'LLM'}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(message.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {message.content}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))
-          ) : (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">No chat preview available</p>
+                Clear
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
+            <div className="text-center px-4">
+              <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 mb-2">No data loaded</p>
               <p className="text-sm text-gray-400">
-                Paste your LLM conversation or upload a chat file to see the preview
+                Enter a shared chat link above and click "Load"
               </p>
             </div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-4 space-y-3">
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1">
-            <Upload className="w-4 h-4 mr-2" />
-            Upload File
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1"
-            onClick={() => {
-              setMessages(mockMessages);
-              onChatData(mockMessages);
-            }}
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            Use Sample
-          </Button>
-        </div>
-        
-        <Textarea
-          placeholder="Paste your LLM conversation here... (Human: ... Assistant: ...)"
-          value={chatText}
-          onChange={(e) => setChatText(e.target.value)}
-          className="min-h-[100px] resize-none"
-        />
-        
-        <Button 
-          onClick={handleProcessChat}
-          disabled={!chatText.trim() || isProcessing}
-          className="w-full"
-        >
-          {isProcessing ? "Processing..." : "Process Chat"}
-        </Button>
+          </div>
+        )}
       </div>
     </div>
   );

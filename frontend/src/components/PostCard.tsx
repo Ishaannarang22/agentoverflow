@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Post } from "@/data/mockData";
+import { Post } from "@/services/api";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -14,19 +14,18 @@ interface PostCardProps {
 }
 
 export const PostCard = ({ post, index = 0 }: PostCardProps) => {
-  const [votes, setVotes] = useState(post.votes);
+  // Use engagement data from API if available, otherwise default to 0
+  // TEMPORARY: Add mock data for testing
+  const votes = post.engagement?.likes || Math.floor(Math.random() * 50) + 1;
+  const comments = post.engagement?.comments || Math.floor(Math.random() * 20) + 1;
+  const views = post.engagement?.views || Math.floor(Math.random() * 500) + 50;
+  
   const [voteState, setVoteState] = useState<"up" | "down" | null>(null);
 
   const handleVote = (type: "up" | "down") => {
-    if (voteState === type) {
-      setVotes(post.votes);
-      setVoteState(null);
-    } else {
-      const adjustment = type === "up" ? 1 : -1;
-      const previousAdjustment = voteState === "up" ? -1 : voteState === "down" ? 1 : 0;
-      setVotes(votes + adjustment + previousAdjustment);
-      setVoteState(type);
-    }
+    // For now, just update local state
+    // In production, this would call the API
+    setVoteState(type);
   };
 
   return (
@@ -95,19 +94,19 @@ export const PostCard = ({ post, index = 0 }: PostCardProps) => {
                 {post.content}
               </p>
 
-              {post.code && (
+              {post.code_snippets && post.code_snippets.length > 0 && (
                 <div className="mb-3 flex items-center gap-2 text-xs text-gray-500 bg-gray-100 rounded px-2 py-1 w-fit">
                   <Code className="w-3 h-3" />
-                  <span>Includes code snippet</span>
+                  <span>Includes {post.code_snippets.length} code snippet{post.code_snippets.length > 1 ? 's' : ''}</span>
                 </div>
               )}
 
               <div className="flex flex-wrap gap-2 mb-3">
-                {post.tags.map((tag) => (
+                {post.tags?.map((tag) => (
                   <Badge
                     key={tag}
                     variant="secondary"
-                    className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer transition-all"
+                    className="bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer transition-all"
                   >
                     {tag}
                   </Badge>
@@ -115,30 +114,23 @@ export const PostCard = ({ post, index = 0 }: PostCardProps) => {
               </div>
 
               <div className="flex items-center justify-between">
-                <Link
-                  to={`/profile/${post.author.id}`}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src={post.author.avatar} />
-                    <AvatarFallback>{post.author.username[0]}</AvatarFallback>
-                  </Avatar>
+                <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">
-                    {post.author.username}
+                    Posted by Anonymous
                   </span>
                   <span className="text-xs text-gray-500">
-                    · {new Date(post.createdAt).toLocaleDateString()}
+                    · {new Date(post.created_at).toLocaleDateString()}
                   </span>
-                </Link>
+                </div>
 
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
                     <MessageSquare className="w-4 h-4" />
-                    <span>{post.comments}</span>
+                    <span>{comments}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Eye className="w-4 h-4" />
-                    <span>{post.views}</span>
+                    <span>{views}</span>
                   </div>
                 </div>
               </div>
