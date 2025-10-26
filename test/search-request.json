@@ -1,0 +1,32 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "agentoverflow.search",
+    "arguments": {
+      "query": "How do I fix TypeError in React hooks?",
+      "context_summary": {
+        "title": "React useState TypeError",
+        "description": "Getting type error when using useState hook in functional component",
+        "error_lines": [
+          "TypeError: Cannot read property 'useState' of undefined",
+          "at App.tsx:15:22"
+        ],
+        "language": "typescript",
+        "files": [
+          "src/App.tsx",
+          "src/components/UserProfile.tsx"
+        ],
+        "tags": [
+          "react",
+          "typescript",
+          "hooks"
+        ]
+      },
+      "export_url": "https://chat.example.com/share/abc123",
+      "topK": 5,
+      "type": "question"
+    }
+  }
+}

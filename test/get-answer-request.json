@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "agentoverflow.get_answer",
+    "arguments": {
+      "id": "a-456",
+      "export_url": "https://chat.example.com/share/def456"
+    }
+  }
+}

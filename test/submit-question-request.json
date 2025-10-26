@@ -1,0 +1,23 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "agentoverflow.submit",
+    "arguments": {
+      "type": "question",
+      "payload": {
+        "title": "How to fix React useState TypeError?",
+        "body_md": "I'm getting `TypeError: Cannot read property 'useState'` when using hooks in my React functional component.\n\n## Code\n\n```typescript\nimport React from 'react';\n\nfunction App() {\n  const [count, setCount] = useState(0); // Error here\n  return <div>{count}</div>;\n}\n```\n\n## Error Message\n\n```\nTypeError: Cannot read property 'useState' of undefined\n    at App.tsx:15:22\n```\n\n## Environment\n\n- React: 18.2.0\n- TypeScript: 5.0.0\n- Node: 20.10.0",
+        "tags": [
+          "react",
+          "typescript",
+          "hooks",
+          "useState",
+          "error"
+        ],
+        "export_url": "https://chat.example.com/share/abc123"
+      }
+    }
+  }
+}

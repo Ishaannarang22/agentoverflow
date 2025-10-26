@@ -1,26 +1,22 @@
-import express from 'express';
+import 'dotenv/config';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { request } from 'undici';
 
 // ============================================================================
 // Environment Variables
 // ============================================================================
-const MCP_PORT = Number(process.env.MCP_PORT) || 3000;
 const API_BASE_URL = process.env.API_BASE_URL || '';
-const API_KEY = process.env.API_KEY || '';
+const MCP_USERNAME = process.env.MCP_USERNAME || '';
+const MCP_PASSWORD = process.env.MCP_PASSWORD || '';
 const SERVER_NAME = process.env.SERVER_NAME || 'agentoverflow';
 const SERVER_VERSION = process.env.SERVER_VERSION || '0.0.1';
 const DEBUG = process.env.DEBUG === 'true';
 
 if (!API_BASE_URL) {
-  console.error('ERROR: API_BASE_URL environment variable is required');
-  process.exit(1);
-}
-
-if (!API_KEY) {
-  console.error('ERROR: API_KEY environment variable is required');
+  // Write to stderr instead of stdout to avoid breaking JSON-RPC
+  process.stderr.write('ERROR: API_BASE_URL environment variable is required\n');
   process.exit(1);
 }
 
@@ -61,7 +57,7 @@ const SearchResponseSchema = z.object({
   }).optional(),
   empty_message: z.string().optional(),
   next_action: z.string().optional(),
-});
+}).passthrough();
 
 // Schema for agentoverflow.get_answer
 const GetAnswerInputSchema = z.object({
@@ -73,7 +69,7 @@ const GetAnswerResponseSchema = z.object({
   title: z.string().optional(),
   body_md: z.string(),
   related_ids: z.array(z.string()).optional(),
-});
+}).passthrough();
 
 // Schema for agentoverflow.submit
 const SubmitInputSchema = z.object({
@@ -95,7 +91,7 @@ const SubmitResponseSchema = z.object({
   result: z.string(),
   export_url: z.string().optional(),
   status: z.string().optional(),
-});
+}).passthrough();
 
 type SearchInput = z.infer<typeof SearchInputSchema>;
 type SearchResponse = z.infer<typeof SearchResponseSchema>;
@@ -138,7 +134,8 @@ function jsonLog(label: string, data: any): void {
     jsonStr = jsonStr.substring(0, 1000) + '\n... (truncated)';
   }
 
-  console.log(`[DEBUG] ${label}:`, jsonStr);
+  // Write to stderr instead of stdout to avoid breaking JSON-RPC
+  process.stderr.write(`[DEBUG] ${label}: ${jsonStr}\n`);
 }
 
 async function fetchMediator(
@@ -148,21 +145,38 @@ async function fetchMediator(
     body?: any;
   }
 ): Promise<any> {
-  const url = `${API_BASE_URL}${path}`;
+  let url = `${API_BASE_URL}${path}`;
+
+  // For GET requests, add credentials as query parameters
+  if (options.method === 'GET' && MCP_USERNAME && MCP_PASSWORD) {
+    const params = new URLSearchParams({
+      mcp_username: MCP_USERNAME,
+      mcp_password: MCP_PASSWORD,
+    });
+    url += `?${params.toString()}`;
+  }
+
+  // For POST requests, add credentials to the body
+  const bodyWithCredentials = options.method === 'POST' && options.body ? {
+    ...options.body,
+    mcp_username: MCP_USERNAME,
+    mcp_password: MCP_PASSWORD,
+  } : options.body;
 
   jsonLog('Mediator Request', {
     method: options.method,
-    url,
-    body: options.body
+    url: options.method === 'GET' ? url : `${API_BASE_URL}${path}`,
+    body: bodyWithCredentials
   });
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
 
   const response = await request(url, {
     method: options.method,
-    headers: {
-      'Authorization': `Bearer ${API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    headers,
+    body: bodyWithCredentials ? JSON.stringify(bodyWithCredentials) : undefined,
   });
 
   const responseText = await response.body.text();
@@ -181,15 +195,8 @@ async function fetchMediator(
 }
 
 // ============================================================================
-// Express Server
+// MCP Server Setup
 // ============================================================================
-
-const app = express();
-app.use(express.json());
-
-app.get('/healthz', (_req, res) => {
-  res.json({ ok: true });
-});
 
 // ============================================================================
 // MCP Request Schemas
@@ -224,12 +231,12 @@ const mcpServer = new Server(
   }
 );
 
-// Tool: agentoverflow.search
+// Tool: agentoverflow_search
 mcpServer.setRequestHandler(ToolsListRequestSchema, async () => {
   return {
     tools: [
       {
-        name: 'agentoverflow.search',
+        name: 'agentoverflow_search',
         description: 'Search for similar questions or answers in the AgentOverflow database',
         inputSchema: {
           type: 'object',
@@ -274,7 +281,7 @@ mcpServer.setRequestHandler(ToolsListRequestSchema, async () => {
         },
       },
       {
-        name: 'agentoverflow.get_answer',
+        name: 'agentoverflow_get_answer',
         description: 'Retrieve a specific answer or question by ID',
         inputSchema: {
           type: 'object',
@@ -292,7 +299,7 @@ mcpServer.setRequestHandler(ToolsListRequestSchema, async () => {
         },
       },
       {
-        name: 'agentoverflow.submit',
+        name: 'agentoverflow_submit',
         description: 'Submit a new question or answer to AgentOverflow',
         inputSchema: {
           type: 'object',
@@ -329,7 +336,7 @@ mcpServer.setRequestHandler(ToolsCallRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case 'agentoverflow.search': {
+      case 'agentoverflow_search': {
         const input = SearchInputSchema.parse(args);
 
         // Clamp topK
@@ -361,7 +368,7 @@ mcpServer.setRequestHandler(ToolsCallRequestSchema, async (request) => {
         };
       }
 
-      case 'agentoverflow.get_answer': {
+      case 'agentoverflow_get_answer': {
         const input = GetAnswerInputSchema.parse(args);
 
         const response = await fetchMediator(`/docs/${input.id}`, {
@@ -394,7 +401,7 @@ mcpServer.setRequestHandler(ToolsCallRequestSchema, async (request) => {
         };
       }
 
-      case 'agentoverflow.submit': {
+      case 'agentoverflow_submit': {
         const input = SubmitInputSchema.parse(args);
 
         // Validate type-specific requirements
@@ -458,32 +465,20 @@ mcpServer.setRequestHandler(ToolsCallRequestSchema, async (request) => {
 });
 
 // ============================================================================
-// MCP HTTP Transport
+// Start Server with Stdio Transport
 // ============================================================================
 
-app.post('/mcp', async (req, res) => {
-  // Create a new transport for each request
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined, // Stateless mode
-    enableJsonResponse: true,
-  });
-
-  res.on('close', () => {
-    transport.close();
-  });
-
+async function main() {
+  const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
-  await transport.handleRequest(req, res, req.body);
-});
 
-// ============================================================================
-// Server Startup
-// ============================================================================
+  // Log to stderr to avoid interfering with JSON-RPC on stdout
+  process.stderr.write(`[INFO] AgentOverflow MCP Server v${SERVER_VERSION} started\n`);
+  process.stderr.write(`[INFO] API Base URL: ${API_BASE_URL}\n`);
+  process.stderr.write(`[INFO] Debug mode: ${DEBUG}\n`);
+}
 
-app.listen(MCP_PORT, () => {
-  console.log(`[INFO] AgentOverflow MCP Server v${SERVER_VERSION}`);
-  console.log(`[INFO] Health check: http://localhost:${MCP_PORT}/healthz`);
-  console.log(`[INFO] MCP endpoint: http://localhost:${MCP_PORT}/mcp`);
-  console.log(`[INFO] API Base URL: ${API_BASE_URL}`);
-  console.log(`[INFO] Debug mode: ${DEBUG}`);
+main().catch((error) => {
+  process.stderr.write(`[ERROR] Failed to start server: ${error}\n`);
+  process.exit(1);
 });
