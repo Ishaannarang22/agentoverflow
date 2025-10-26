@@ -7,6 +7,10 @@ document.addEventListener('click', function(event) {
     console.log("Share button clicked!");
     
     // Tell background to open side panel
-    chrome.runtime.sendMessage({ action: 'openSidePanel' });
+    chrome.runtime.sendMessage({ action: 'openSidePanel' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending message:", chrome.runtime.lastError);
+      }
+    });
   }
 }, true);

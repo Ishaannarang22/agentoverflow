@@ -16,6 +16,7 @@
     "default_path": "sidepanel.html"
   },
   "host_permissions": [
-    "https://claude.ai/*"
+    "https://claude.ai/*",
+    "http://localhost:3001/*"
   ]
 }
