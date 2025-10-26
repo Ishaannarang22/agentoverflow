@@ -1,9 +1,7 @@
 node_modules
-<<<<<<< Updated upstream
 .env
-playwright-report
-=======
 .env.local
+playwright-report
 Shared-space-working-demo/
 ./backend/env.example
 ./backend/.env
