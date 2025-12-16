@@ -1,102 +1,145 @@
-#agentoverflow
+# AgentOverflow
 
+Stack Overflow for AI/agent problems.  
+Break the prompt spiral and jump straight to proven fixes.
 
-Share Solution JSON Schema : 
+AgentOverflow captures, validates, and reuses real LLM and agent debugging solutions in a structured JSON format so developers can stop re-solving the same hallucination-driven issues and ship faster.[web:2]
 
+## What is AgentOverflow?
+
+Modern LLM and agent workflows generate tons of valuable debugging history that usually disappears in chat logs. AgentOverflow turns those one-off fixes into a reusable knowledge layer:
+
+- Capture solved LLM/agent issues into a canonical **Share Solution JSON**.
+- Validate and enrich them with an AI + human-in-the-loop pipeline.
+- Index everything so other developers can **search and reuse** the exact fix.
+- Pipe high-signal solutions directly into live LLM sessions via **MCP**.[web:2]
+
+## Core Workflow
+
+### 1. Share Solution JSON
+
+When you solve an AI/agent issue:
+
+- Use the Chrome side panel to trigger **“Share Solution”** on a Claude share or any public page.[web:2]
+- The backend scrapes the page and assembles a **Share Solution JSON**: title, problem, context, technical description, code, tags, and more.[web:2]
+- The **LAVA** pipeline validates and enforces the schema, then you add a short human summary in the web app for final alignment.[web:2]
+- The validated JSON is stored and indexed in Elasticsearch as a reusable solution.[web:2]
+
+### 2. Find Solution
+
+When you are stuck on a new issue:
+
+- Hit **“Find Solution”** in the side panel.[web:2]
+- AgentOverflow scrapes your current conversation into a **query JSON**.[web:2]
+- A hybrid Elasticsearch search (keyword + vector) runs over validated solutions.[web:2]
+- You get ranked, community-verified fixes and can copy:
+  - The final working code snippet, or
+  - The exact prompt that solved a similar problem before.[web:2]
+
+### 3. MCP: Inject Knowledge into Agents
+
+AgentOverflow also exposes stored solutions through a **Modular Context Protocol (MCP) server**:
+
+- LLMs and agents can pull relevant Share Solution JSONs at runtime.[web:2]
+- Only high-signal context is injected: code, logs, configs, prior fixes.[web:2]
+- This turns LLMs from stateless responders into context-aware debuggers plugged into a living knowledge base.[web:2]
+
+## Architecture
+
+The system is built as a full pipeline from browser to agents:
+
+- **Chrome Extension (MV3 Side Panel)**  
+  Captures the current URL and user actions to trigger Share/Find flows.[web:2]
+- **Node.js Backend**  
+  Orchestrates scraping, LAVA calls, normalization, and persistence.[web:2]
+- **Playwright Scraper**  
+  Extracts content from modern web apps (e.g. Claude’s Next.js pages), combining:
+  - Inline JSON (`__NEXT_DATA__`)
+  - DOM and shadow DOM
+  - Code blocks
+  - CDP snapshots  
+  Falls back to Jina Reader / Readability, with an optional Bright Data proxy for tough pages.[web:2]
+- **Normalizer**  
+  Canonicalizes URLs, computes `solution_id = sha256(canonical_url)`, de-duplicates mirrored pages, and preserves raw code.[web:2]
+- **LAVA (Assembler + Validator)**  
+  Fills the solution schema, enforces required keys, and runs a second pass after human edits to keep summaries aligned with the underlying conversation.[web:2]
+- **Web App**  
+  Lets users review JSON, add human context, and publish solutions to DB + Elasticsearch.[web:2]
+- **MCP Server**  
+  Streams stored solutions into future LLM sessions for retrieval-augmented debugging.[web:2]
+
+## Share Solution JSON Schema
+
+AgentOverflow centers everything around a portable JSON schema that represents a solved issue:[web:2]
+
+```
 {
-  "solution_id": "[unique-id-from-share-link]",
-  "share_link": "[https://claude.ai/share/...]",
-  "type": "share",
-  
-  "title": "[Brief descriptive title of the solution - e.g., 'Fix React useEffect Infinite Loop with useRef']",
-  
-  "problem": "[1-2 sentence description of what the issue was]",
-  
-  "context": "[Summarized overview in ~200 words: What was the issue? What wasn't working? What was the current behavior vs expected behavior?]",
-  
-  "technical_description": "[Detailed technical explanation of what was happening and how it was fixed: What was the root cause? What are the underlying mechanisms? What's the technical solution? How does the fix work? Include framework-specific details and architectural patterns.]",
-  
-  "solution": "[Clear description of the working solution - what was done to fix it? What approach was taken? What was the key insight?]",
-  
-  "summary": "[Brief 2-3 sentence summary of the entire conversation: problem encountered → solution found → outcome]",
-  
-  "error_messages": [
-    "[Exact error message 1]",
-    "[Exact error message 2]"
-  ],
-  
-  "attempted_solutions": [
-    "[What they tried #1 and the result]",
-    "[What they tried #2 and the result]"
-  ],
-  
-  "code_snippets": [
-    {
-      "description": "[e.g., 'Broken implementation', 'Working solution', 'Final fix']",
-      "code": "[The actual code]"
-    }
-  ],
-  
-  "technical_deep_context": "[Extract MAXIMUM information from the chat for future similarity matching: Include all technical details, edge cases mentioned, specific version numbers, environment details (OS, browser, Node version, etc.), package versions, configuration settings, file structure context, related technologies in the stack, deployment environment, timing issues, race conditions, performance characteristics, memory usage patterns, network conditions, authentication/authorization context, database schema details if relevant, API endpoint specifics, third-party service integrations, build tool configurations, linting/formatting setup, testing framework details, any async/sync considerations, concurrency patterns, state management approach, data flow architecture, component hierarchy, prop drilling issues, re-render triggers, lifecycle considerations, event handling specifics, CSS/styling approach if relevant, responsive design considerations, accessibility concerns mentioned, browser compatibility issues, polyfill requirements, bundler configuration, code splitting strategy, lazy loading patterns, caching strategies, API rate limiting, error boundaries, fallback UI, loading states, error handling patterns, validation logic, form handling approach, routing configuration, middleware setup, security considerations, CORS settings, cookie/session handling, WebSocket usage, real-time update patterns, optimization techniques tried, profiling results, debugging steps taken, console output details, network tab observations, React DevTools insights, Redux DevTools data if applicable, and any other contextual information that could help match similar problems in the future. Include conversational context like 'user mentioned they are a beginner' or 'user is working on a production app with 10k users' or 'tight deadline' or 'refactoring legacy code'. The more context, the better the matching.]",
-  
-  "tags": [
-    "[technology]",
-    "[framework]",
-    "[concept]",
-    "[error-type]"
-  ],
-  
-  "created_at": "[ISO 8601 timestamp]"
+  "solution_id": "",
+  "share_link": "",
+  "type": "",
+  "title": "",
+  "problem": "",
+  "context": "",
+  "technical_description": "",
+  "solution": "",
+  "summary": "",
+  "error_messages": [],
+  "attempted_solutions": [],
+  "code_snippets": [],
+  "technical_deep_context": "",
+  "tags": [],
+  "created_at": ""
 }
+```
 
+This format makes solutions easy to search, analyze, and inject into other tools or agents.[web:2]
 
+## Technical Stack
 
+- **Extension:** Chrome MV3 + Side Panel API[web:2]  
+- **Backend:** Node.js, Express, Playwright[web:2]  
+- **AI:** LAVA API + Claude Sonnet 3.5 for assembling and validating solution JSONs[web:2]  
+- **Search:** Elasticsearch with hybrid vector + keyword retrieval[web:2]  
+- **Storage:** DB + LRU cache for hot solutions[web:2]  
+- **Scraping:** Playwright, Jina Reader, Readability, optional Bright Data proxy[web:2]
 
+## Challenges & Learnings
 
-Find Soltuion JSON Schema : 
+- Scraping complex Claude pages (dynamic Next.js, shadow DOM, iframes) required multiple extraction strategies and careful normalization.[web:2]
+- Strict schemas and validation are necessary to prevent fabricated fields and preserve raw code, making LLM output actually reusable as knowledge.[web:2]
+- Canonical URLs plus hashing provide a single source of truth, and small UX details (side panel, copy button, “open in web app”) massively improve adoption.[web:2]
 
-{
-  "solution_id": "[unique-id-from-share-link]",
-  "share_link": "[https://claude.ai/share/...]",
-  "type": "find",
-  
-  "title": "[Brief descriptive title of the problem - e.g., 'React useEffect Causing Infinite Renders']",
-  
-  "problem": "[1-2 sentence description of the core issue they're facing]",
-  
-  "context": "[Summarized overview in ~200 words: What is the issue? What's not working? What's the current behavior vs expected behavior? What are they trying to accomplish?]",
-  
-  "technical_description": "[Detailed technical explanation of what's happening: What seems to be the root cause based on current understanding? What are the symptoms? What's the technical nature of the problem? Include any hypotheses about what might be wrong.]",
-  
-  "solution": null,
-  
-  "summary": "[Brief 2-3 sentence summary of the problem: what they're trying to do → what's going wrong → current status]",
-  
-  "error_messages": [
-    "[Exact error message 1]",
-    "[Exact error message 2]"
-  ],
-  
-  "attempted_solutions": [
-    "[What they tried #1 and the result]",
-    "[What they tried #2 and the result]"
-  ],
-  
-  "code_snippets": [
-    {
-      "description": "[e.g., 'Current broken implementation', 'First attempted fix that failed']",
-      "code": "[The actual code]"
-    }
-  ],
-  
-  "technical_deep_context": "[Extract MAXIMUM information from the chat for future similarity matching: Include all technical details, edge cases mentioned, specific version numbers, environment details (OS, browser, Node version, etc.), package versions, configuration settings, file structure context, related technologies in the stack, deployment environment, timing issues, race conditions, performance characteristics, memory usage patterns, network conditions, authentication/authorization context, database schema details if relevant, API endpoint specifics, third-party service integrations, build tool configurations, linting/formatting setup, testing framework details, any async/sync considerations, concurrency patterns, state management approach, data flow architecture, component hierarchy, prop drilling issues, re-render triggers, lifecycle considerations, event handling specifics, CSS/styling approach if relevant, responsive design considerations, accessibility concerns mentioned, browser compatibility issues, polyfill requirements, bundler configuration, code splitting strategy, lazy loading patterns, caching strategies, API rate limiting, error boundaries, fallback UI, loading states, error handling patterns, validation logic, form handling approach, routing configuration, middleware setup, security considerations, CORS settings, cookie/session handling, WebSocket usage, real-time update patterns, optimization techniques tried, profiling results, debugging steps taken, console output details, network tab observations, React DevTools insights, Redux DevTools data if applicable, and any other contextual information that could help match similar problems in the future. Include conversational context like 'user mentioned they are a beginner' or 'user is working on a production app with 10k users' or 'tight deadline' or 'refactoring legacy code'. The more context, the better the matching.]",
-  
-  "tags": [
-    "[technology]",
-    "[framework]",
-    "[concept]",
-    "[error-type]"
-  ],
-  
-  "created_at": "[ISO 8601 timestamp]"
-}
+## Roadmap
+
+Planned next steps for AgentOverflow:
+
+- **Team Repos** – org-scoped libraries of solutions with permissions and ownership.[web:2]
+- **Better Ranking** – solve-rate metrics and feedback signals to surface the most effective fixes.[web:2]
+- **Deeper Elastic Integration** – richer vectors over code and deep technical context, plus framework-specific synonyms.[web:2]
+- **More Input Channels** – ingest Slack, Discord, GitHub issues into the same schema.[web:2]
+- **Quality Gates** – automatic spec/API validation before publishing.[web:2]
+- **SDK + API** – let any LLM, agent, or tool read and write Share Solution JSONs.[web:2]
+
+## Getting Started
+
+> Note: Fill this section with your actual setup steps once the repo structure is finalized.
+
+Example:
+
+1. Clone the repo:
+   ```
+   git clone https://github.com/Ishaannarang22/agentoverflow.git
+   cd agentoverflow
+   ```
+2. Install dependencies for extension, backend, and web app.
+3. Set environment variables for LAVA, Elasticsearch, and MCP.
+4. Run the dev stack (e.g., `docker-compose up` or individual services).
+
+## Contributing
+
+Issues, feature requests, and PRs are welcome.  
+If you build a new ingestion path or consumer (e.g., for a different IDE or agent framework), aim to read/write the Share Solution JSON schema so the knowledge layer stays consistent across tools.[web:2]
+
+## License
+
+Add your chosen license here (e.g., MIT, Apache 2.0).
